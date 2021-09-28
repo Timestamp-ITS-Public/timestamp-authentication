@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<configuration-properties doc:name="Configuration properties" doc:id="61a57960-74f3-4b37-add9-a11b6dcd2b93" file="properties/config.yaml" />
+	<http:request-config name="HTTP_Request_configuration" doc:name="HTTP Request configuration" doc:id="d4bd9ae1-86f9-454f-b286-47bd35ade9b4" >
+		<http:request-connection host="${conn.host}" port="${conn.port}" />
+	</http:request-config>
+	<flow name="keycloak-authentication-impl" doc:id="a71a2ea5-3ec6-484f-b065-0c20885b767f" >
+		<ee:transform doc:name="Keycloak Params" doc:id="962f1f6f-a08d-4a28-b4f1-621f42282375" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/x-www-form-urlencoded
+---
+{
+  client_id: attributes.headers.client_id,
+  client_secret: attributes.headers.client_secret,
+  username: p("auth.username"),
+  password: p("auth.password"),
+  scope: p("auth.scope"),
+  grant_type: p("auth.grant_type")
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<http:request method="POST" doc:name="Keycloak Request" doc:id="22ec84cf-9e78-40de-8979-fa56b85b8829" config-ref="HTTP_Request_configuration" path="#[&quot;/auth/realms/$(p('realm'))/protocol/openid-connect/token&quot;]">
+		</http:request>
+		<ee:transform doc:name="Validation Successful Message" doc:id="56cd2513-909c-4a03-9d5d-b60993239089">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message": "validation performed successfully"
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="e62c6651-66d7-4ce0-bc0d-f932f3ccac28" >
+				<ee:transform doc:name="Error Message" doc:id="f8e9ec6e-ff1c-41ee-a656-ccd3d0906fcc" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+error.errorMessage.payload]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</on-error-propagate>
+		</error-handler>
+	</flow>
+</mule>

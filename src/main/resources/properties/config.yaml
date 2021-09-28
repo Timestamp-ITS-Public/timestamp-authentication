@@ -1,0 +1,11 @@
+conn:
+  host: "localhost"
+  port: "8080"
+  
+realm: "realm"
+
+auth:
+  scope: "openid"
+  grant_type: "password"
+  username: "username"
+  password: "password"
